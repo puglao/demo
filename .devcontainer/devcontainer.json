@@ -30,7 +30,8 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"amazonwebservices.aws-toolkit-vscode"
+				"amazonwebservices.aws-toolkit-vscode",
+				"mhutchie.git-graph"
 			]
 		}
 	}
