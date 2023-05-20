@@ -1,0 +1,29 @@
+#!/bin/bash
+set -e
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+	CREATE USER demo WITH PASSWORD 'demo';
+	CREATE DATABASE demo;
+	GRANT ALL PRIVILEGES ON DATABASE demo TO demo;
+
+	CREATE USER dex PASSWORD 'dex';
+	CREATE DATABASE dex;
+	GRANT ALL PRIVILEGES ON DATABASE dex TO dex;
+
+	CREATE USER keycloak PASSWORD 'keycloak';
+	CREATE DATABASE keycloak;
+	GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;
+EOSQL
+
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "demo" <<-EOSQL
+	GRANT ALL PRIVILEGES ON SCHEMA PUBLIC TO demo;
+EOSQL
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "dex" <<-EOSQL
+	GRANT ALL PRIVILEGES ON SCHEMA PUBLIC TO dex;
+EOSQL
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "keycloak" <<-EOSQL
+	GRANT ALL PRIVILEGES ON SCHEMA PUBLIC TO keycloak;
+EOSQL

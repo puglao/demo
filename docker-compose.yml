@@ -1,0 +1,140 @@
+version: '3'
+
+x-custom:
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    init: true
+    depends_on:
+      - postgres
+    profiles:
+      - prod
+    command: npm start
+
+  dev:
+    image: node:20-alpine3.16
+    working_dir: /app
+    init: true
+    depends_on:
+      - postgres
+    profiles:
+      - dev
+    tty: true
+    environment:
+      SERVER_HOST: 7f000001.nip.io:8443
+      NODE_TLS_REJECT_UNAUTHORIZED: 0
+    volumes:
+      - ./src:/app/src
+      - ./node_modules:/app/node_modules
+      - ./package.json:/app/package.json
+      - ./package-lock.json:/app/package-lock.json
+      - ./tsconfig.json:/app/tsconfig.json
+    command: npm run dev
+  
+  # dex:
+  #   build:
+  #     context: .
+  #     dockerfile_inline: |
+  #       FROM dexidp/dex:v2.36.0-alpine
+  #       COPY ./manifest/caddy/data/caddy/pki/authorities/local/root.crt /usr/local/share/ca-certificates/caddy.crt
+  #       USER root
+  #       RUN apk update && apk add ca-certificates
+  #       RUN update-ca-certificates
+  #       USER 1001:1001
+  #   environment:
+  #     DEX_ISSUER: https://7f000001.nip.io:8443/dex
+  #     DEX_CONNECTORS_ENABLE_MOCK: false
+  #     DEX_OAUTH2_ALWAYS_SHOW_LOGIN_SCREEN: true
+  #     DEX_ENABLE_PASSWORD_DB: true
+  #     APP_SERVER_HOST: 7f000001.nip.io:8443
+  #   depends_on:
+  #     - postgres
+  #     - caddy
+  #     - keycloak
+  #   restart: on-failure
+  #   volumes:
+  #     - ./manifest/dex/config.docker.yaml:/tmp/config.docker.yaml
+  #   command: dex serve /tmp/config.docker.yaml
+  #   command: update-ca-certificates && dex serve /tmp/config.docker.yaml
+  
+  postgres:
+    image: postgres:15.3-alpine3.18
+    volumes:
+       - pgdata:/var/lib/postgresql/data
+       - ./manifest/postgres:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_PASSWORD: P@ssw0rd
+      PGUSER: postgres
+
+  caddy:
+    image: caddy:2.6.4-alpine
+    command: caddy run --config Caddyfile
+    ports:
+      - "8080:80/tcp"
+      - "8443:8443/tcp"
+    networks:
+      default:
+        aliases:
+          - 7f000001.nip.io
+    logging:
+      driver: "none"
+    volumes:
+      - "caddydata:/data"
+      - "./manifest/caddy/Caddyfile:/srv/Caddyfile"
+  
+  pgadmin:
+    image: dpage/pgadmin4:7.1
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: P@ssw0rd
+    depends_on:
+      - postgres
+    profiles:
+      - dev
+    volumes:
+      - "./manifest/pgadmin/servers.json:/pgadmin4/servers.json"
+    logging:
+      driver: "none"
+  
+  keycloak:
+    image: quay.io/keycloak/keycloak:21.1.1
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: P@ssw0rd
+    volumes:
+      - "./manifest/keycloak:/opt/keycloak/data/import"
+    command: |
+      start-dev \
+      --db postgres \
+      --db-url jdbc:postgresql://postgres/keycloak \
+      --db-username keycloak \
+      --db-password keycloak \
+      --proxy passthrough \
+      --http-relative-path /kc \
+      --import-realm
+    # docker compose exec keycloak /opt/keycloak/bin/kc.sh export --dir /opt/keycloak/data/import
+
+  smtp:
+    image: rnwood/smtp4dev:v3
+    restart: always
+    # ports:
+      # # Change the number before : to the port the web interface should be accessible on
+      # - '5000:80'
+      # # Change the number before : to the port the SMTP server should be accessible on
+      # - '25:25'
+      # # Change the number before : to the port the IMAP server should be accessible on
+      # - '143:143'
+    volumes:
+      # This is where smtp4dev stores the database..
+        - smtp4dev-data:/smtp4dev
+    environment:
+      ServerOptions__BasePath: /smtp
+
+
+volumes:
+  caddydata:
+  smtp4dev-data:
+  pgdata:
