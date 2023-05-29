@@ -69,7 +69,25 @@ services:
       POSTGRES_PASSWORD: P@ssw0rd
       PGUSER: postgres
 
+  lt:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM node:20-alpine3.16
+        RUN npm install -g localtunnel
+        CMD lt --port 80 --local-host caddy -s lab4p
+    stdin_open: true
+    tty: true
+    init: true
+
   caddy:
+    # build:
+    #   context: .
+    #   dockerfile_inline: |
+    #     FROM caddy:2.6.4-builder-alpine AS builder
+    #     RUN xcaddy build --with github.com/mohammed90/caddy-ngrok-listener@v0.1.0
+    #     FROM caddy:2.6.4-alpine
+    #     COPY --from=builder /usr/bin/caddy /usr/bin/caddy
     image: caddy:2.6.4-alpine
     command: caddy run --config Caddyfile
     ports:
@@ -79,8 +97,11 @@ services:
       default:
         aliases:
           - 7f000001.nip.io
+    environment:
+      NGROK_AUTH_TOKEN: 2Q4ph8T3lxdx4vo8G2A6ylrJctt_721yxkahKXJA4hEAHJuMo
     logging:
       driver: "none"
+    restart: on-failure
     volumes:
       - "caddydata:/data"
       - "./manifest/caddy/Caddyfile:/srv/Caddyfile"
@@ -104,6 +125,7 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: P@ssw0rd
+      KC_HOSTNAME: localhost
     volumes:
       - "./manifest/keycloak:/opt/keycloak/data/import"
     command: |
@@ -114,6 +136,7 @@ services:
       --db-password keycloak \
       --proxy passthrough \
       --http-relative-path /kc \
+      --hostname-strict=false \
       --import-realm
     # docker compose exec keycloak /opt/keycloak/bin/kc.sh export --dir /opt/keycloak/data/import
 

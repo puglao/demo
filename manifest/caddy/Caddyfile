@@ -1,13 +1,5 @@
-# {
-# 	debug
-# }
-
-#  {
-# 	redir https://7f000001.nip.io:8443
-# }
-
-7f000001.nip.io:8443 {
-	tls internal
+:80 {
+	# tls internal
 
 	redir /pgadmin /pgadmin/
 	handle_path /pgadmin/* {
@@ -40,11 +32,11 @@
 	handle /smtp/* {
 		reverse_proxy {
 			to http://smtp:80
-			# header_up X-Script-Name "/kc"
-			# header_up X-Scheme "https"
+			header_up X-Script-Name "/smtp"
+			header_up X-Scheme "https"
 		}
 	}
-	
+
 	handle {
 		reverse_proxy http://dev:3000
 	}
