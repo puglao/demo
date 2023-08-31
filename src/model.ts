@@ -7,6 +7,7 @@ const sequelize = new Sequelize({
     dialect: 'postgres'
 })
 
+// test github.dev
 
 // async function createDb() {
 //     const { database } = config.database
